@@ -4,7 +4,126 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { supabase } from "../utils/client";
 
+"use client";
+
+import { useState, useRef } from "react";
+import Image from "next/image";
+import { supabase } from "../utils/client";
+
 export default function CreatePage() {
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [caption, setCaption] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const uploadAndCreatePost = async (file: File) => {
+    const userId = "11111111-1111-1111-1111-111111111111";
+
+    // 1️⃣ Preparar nombre del archivo
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${file.name}-${Date.now()}.${fileExt}`;
+    const filePath = `posts/${fileName}`;
+
+    // 2️⃣ Subir al bucket "images"
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from("images")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error("❌ Error al subir imagen:", uploadError);
+      throw uploadError;
+    }
+
+    // 3️⃣ Obtener URL pública
+    const { data: urlData } = supabase.storage
+      .from("images")
+      .getPublicUrl(filePath);
+
+    const publicUrl = urlData.publicUrl;
+
+    console.log("📸 Imagen subida:", publicUrl);
+
+    // 4️⃣ Crear el post en la tabla posts_new
+    const { data: postData, error: postError } = await supabase
+      .from("posts_new")
+      .insert({
+        user_id: userId,
+        image_url: publicUrl,
+        caption: caption,
+        likes: 0,
+      })
+      .select("*");
+
+    if (postError) {
+      console.error("❌ Error creando el post:", postError);
+      throw postError;
+    }
+
+    console.log("🆕 Post creado:", postData);
+
+    return {
+      uploadedImageUrl: publicUrl,
+      newPost: postData,
+    };
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!imageFile) {
+      setMessage({ type: "error", text: "Por favor selecciona una imagen" });
+      return;
+    }
+
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      await uploadAndCreatePost(imageFile);
+
+      // Éxito
+      setMessage({ type: "success", text: "¡Post creado exitosamente!" });
+      setImageFile(null);
+      setImagePreview(null);
+      setCaption("");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Error al crear el post",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [caption, setCaption] = useState("");

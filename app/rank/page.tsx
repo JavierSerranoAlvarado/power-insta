@@ -90,7 +90,7 @@ function Modal({
             </span>
           </div>
           <p className="mt-2 text-foreground">
-            <span className="font-semibold">{post.user?.username}</span>{" "}
+            <span className="font-semibold">{post.user?.username || "default_user"}</span>{" "}
             <span className="text-foreground/80">{post.caption}</span>
           </p>
         </div>

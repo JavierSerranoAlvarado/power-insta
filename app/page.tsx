@@ -55,7 +55,13 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) => void }) {
+function PostCard({
+  post,
+  onLike,
+}: {
+  post: Post;
+  onLike: (id: number | string) => void;
+}) {
   return (
     <article className="bg-card-bg border border-border rounded-xl overflow-hidden shadow-sm">
       {/* Header con usuario y avatar */}
@@ -90,7 +96,7 @@ function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) 
             className="hover:scale-110 transition-transform active:scale-95"
             aria-label={post.isLiked ? "Quitar like" : "Dar like"}
           >
-            <HeartIcon filled={post.isLiked} />
+            <HeartIcon filled={post.isLiked || false} />
           </button>
           <span className="font-semibold text-foreground">
             {post.likes.toLocaleString('en-US')} likes
