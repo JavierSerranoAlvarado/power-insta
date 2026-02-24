@@ -109,7 +109,7 @@ useEffect(() => {
   async function fetchRank() {
     const { data, error } = await supabase
       .from('posts_new')
-      .select('id, image_url, caption, likes')
+      .select('id, image_url, caption, likes, created_at')
       .gt('likes', 5)
       .order('likes', { ascending: false });
 
