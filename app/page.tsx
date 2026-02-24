@@ -55,13 +55,7 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function PostCard({
-  post,
-  onLike,
-}: {
-  post: Post;
-  onLike: (id: number | string) => void;
-}) {
+function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) => void }) {
   return (
     <article className="bg-card-bg border border-border rounded-xl overflow-hidden shadow-sm">
       {/* Header con usuario y avatar */}
@@ -96,7 +90,7 @@ function PostCard({
             className="hover:scale-110 transition-transform active:scale-95"
             aria-label={post.isLiked ? "Quitar like" : "Dar like"}
           >
-            <HeartIcon filled={post.isLiked || false} />
+            <HeartIcon filled={post.isLiked} />
           </button>
           <span className="font-semibold text-foreground">
             {post.likes.toLocaleString('en-US')} likes
@@ -116,6 +110,7 @@ function PostCard({
 export default function Home() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [page, setPage] = useState(0);
   const observer = useRef<IntersectionObserver | null>(null);
@@ -138,9 +133,15 @@ export default function Home() {
   };
 
   const fetchPosts = useCallback(async (pageNum: number, isInitial = false) => {
-    if (isInitial) setLoading(true);
+    if (isInitial) {
+      setLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     
     try {
+      console.log(`🔍 Fetching posts - Page: ${pageNum}, Initial: ${isInitial}`);
+      
       const { data, error } = await supabase
         .from('posts_new')
         .select('*')
@@ -157,17 +158,27 @@ export default function Home() {
         isLiked: false
       }));
 
+      console.log(`📥 Received ${postsWithLike.length} posts`);
+
       if (isInitial) {
         setPosts(postsWithLike);
       } else {
-        setPosts(prev => [...prev, ...postsWithLike]);
+        setPosts(prev => {
+          const newPosts = [...prev, ...postsWithLike];
+          console.log(`📊 Total posts after adding: ${newPosts.length}`);
+          return newPosts;
+        });
       }
 
       setHasMore((data || []).length === POSTS_PER_PAGE);
     } catch (error) {
       console.error('Error fetching posts:', error);
     } finally {
-      setLoading(false);
+      if (isInitial) {
+        setLoading(false);
+      } else {
+        setIsLoadingMore(false);
+      }
     }
   }, []);
 
@@ -183,7 +194,16 @@ export default function Home() {
     };
 
     observer.current = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && hasMore && !loading) {
+      console.log('👀 Intersection triggered:', {
+        isIntersecting: entries[0].isIntersecting,
+        hasMore,
+        loading,
+        isLoadingMore,
+        page
+      });
+      
+      if (entries[0].isIntersecting && hasMore && !loading && !isLoadingMore) {
+        console.log('🚀 Triggering next page load');
         const nextPage = page + 1;
         setPage(nextPage);
         fetchPosts(nextPage);
@@ -199,7 +219,7 @@ export default function Home() {
         observer.current.disconnect();
       }
     };
-  }, [loading, hasMore, page, fetchPosts]);
+  }, [loading, hasMore, page, isLoadingMore, fetchPosts]);
 
 
   return (
@@ -228,7 +248,14 @@ export default function Home() {
           {/* Loading indicator */}
           {loading && (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400"></div>
+            </div>
+          )}
+          
+          {/* Infinite scroll loading indicator */}
+          {isLoadingMore && (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-400"></div>
             </div>
           )}
           
