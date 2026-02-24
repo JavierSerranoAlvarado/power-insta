@@ -1,6 +1,7 @@
-export function getTimeAgo(date: Date): string {
+export function getTimeAgo(date: string | Date): string {
+  const parsedDate = date instanceof Date ? date : new Date(date);
   const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  const seconds = Math.floor((now.getTime() - parsedDate.getTime()) / 1000);
   
   if (seconds < 60) return "hace unos segundos";
   const minutes = Math.floor(seconds / 60);

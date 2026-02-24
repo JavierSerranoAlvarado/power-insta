@@ -1,9 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { getTimeAgo } from "../utils/time";
 import { posts, type Post } from "../mocks/posts";
+import { supabase } from "../utils/client";
+import Avatar from "../components/Avatar";
 
 function HeartIcon() {
   return (
@@ -58,16 +60,13 @@ function Modal({
 
         {/* Header con usuario */}
         <div className="flex items-center gap-3 p-4 border-b border-border">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary">
-            <Image
-              src={post.user.avatar}
-              alt={post.user.username}
-              fill
-              className="object-cover"
-            />
-          </div>
+          <Avatar 
+            src={post.user?.avatar} 
+            username={post.user?.username}
+            alt={post.user?.username || "Usuario"}
+          />
           <div className="flex flex-col">
-            <span className="font-semibold text-foreground">{post.user.username}</span>
+            <span className="font-semibold text-foreground">{post.user?.username}</span>
             <span className="text-xs text-foreground/50">{getTimeAgo(post.created_at)}</span>
           </div>
         </div>
@@ -76,7 +75,7 @@ function Modal({
         <div className="relative w-full aspect-square">
           <Image
             src={post.image_url}
-            alt={`Post de ${post.user.username}`}
+            alt={`Post de ${post.user?.username}`}
             fill
             className="object-cover"
           />
@@ -87,11 +86,11 @@ function Modal({
           <div className="flex items-center gap-2">
             <HeartIcon />
             <span className="text-lg font-bold text-foreground">
-              {post.likes.toLocaleString()} likes
+              {post.likes.toLocaleString('en-US')} likes
             </span>
           </div>
           <p className="mt-2 text-foreground">
-            <span className="font-semibold">{post.user.username}</span>{" "}
+            <span className="font-semibold">{post.user?.username}</span>{" "}
             <span className="text-foreground/80">{post.caption}</span>
           </p>
         </div>
@@ -100,15 +99,37 @@ function Modal({
   );
 }
 
+
 export default function RankPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+// Estado y reemplazo de mocks en la vista de rank
+const [posts, setPosts] = useState<any[]>([]);
+
+useEffect(() => {
+  async function fetchRank() {
+    const { data, error } = await supabase
+      .from('posts_new')
+      .select('id, image_url, caption, likes')
+      .gt('likes', 5)
+      .order('likes', { ascending: false });
+
+    if (error) {
+      console.error('Error al obtener el ranking:', error);
+      return;
+    }
+    setPosts(data ?? []); // aquí reemplazas los mocks
+  }
+
+  fetchRank();
+}, []);
+
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-card-bg border-b border-border">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-center">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
             Ranking
           </h1>
         </div>
@@ -133,7 +154,7 @@ export default function RankPage() {
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                 <HeartIcon />
                 <span className="text-white font-semibold">
-                  {post.likes.toLocaleString()}
+                  {post.likes.toLocaleString('en-US')}
                 </span>
               </div>
             </button>

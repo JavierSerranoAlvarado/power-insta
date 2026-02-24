@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 function HomeIcon({ active }: { active: boolean }) {
   if (active) {
     return (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-blue-400">
         <path d="M11.47 3.841a.75.75 0 011.06 0l8.69 8.69a.75.75 0 101.06-1.061l-8.689-8.69a2.25 2.25 0 00-3.182 0l-8.69 8.69a.75.75 0 101.061 1.06l8.69-8.689z" />
         <path d="M12 5.432l8.159 8.159c.03.03.06.058.091.086v6.198c0 1.035-.84 1.875-1.875 1.875H15a.75.75 0 01-.75-.75v-4.5a.75.75 0 00-.75-.75h-3a.75.75 0 00-.75.75V21a.75.75 0 01-.75.75H5.625a1.875 1.875 0 01-1.875-1.875v-6.198a2.29 2.29 0 00.091-.086L12 5.432z" />
       </svg>
@@ -22,7 +22,7 @@ function HomeIcon({ active }: { active: boolean }) {
 function RankIcon({ active }: { active: boolean }) {
   if (active) {
     return (
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-blue-400">
         <path fillRule="evenodd" d="M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm4.5 7.5a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0v-2.25a.75.75 0 01.75-.75zm3.75-1.5a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0V12zm2.25-3a.75.75 0 01.75.75v6.75a.75.75 0 01-1.5 0V9.75A.75.75 0 0113.5 9zm3.75-1.5a.75.75 0 00-1.5 0v9a.75.75 0 001.5 0v-9z" clipRule="evenodd" />
       </svg>
     );
@@ -51,7 +51,7 @@ export default function BottomNav() {
         <Link
           href="/"
           className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
-            pathname === "/" ? "text-primary" : "text-foreground/60 hover:text-foreground"
+            pathname === "/" ? "text-blue-400" : "text-foreground/60 hover:text-foreground"
           }`}
         >
           <HomeIcon active={pathname === "/"} />
@@ -60,7 +60,7 @@ export default function BottomNav() {
 
         <Link
           href="/post"
-          className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-primary to-accent text-white shadow-lg hover:scale-105 transition-transform"
+          className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-blue-400 to-cyan-300 text-white shadow-lg hover:scale-105 transition-transform"
         >
           <PlusIcon />
         </Link>
@@ -68,7 +68,7 @@ export default function BottomNav() {
         <Link
           href="/rank"
           className={`flex flex-col items-center gap-1 px-4 py-2 transition-colors ${
-            pathname === "/rank" ? "text-primary" : "text-foreground/60 hover:text-foreground"
+            pathname === "/rank" ? "text-blue-400" : "text-foreground/60 hover:text-foreground"
           }`}
         >
           <RankIcon active={pathname === "/rank"} />

@@ -1,9 +1,28 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getTimeAgo } from "./utils/time";
-import { posts as initialPosts, type Post } from "./mocks/posts";
+import { supabase } from "./utils/client";
+import Avatar from "./components/Avatar";
+
+interface DatabasePost {
+  id: string;
+  user_id: string;
+  image_url: string;
+  caption: string;
+  likes: number;
+  created_at: string;
+  updated_at?: string;
+  user?: {
+    username: string;
+    avatar?: string;
+  };
+}
+
+interface Post extends DatabasePost {
+  isLiked: boolean;
+}
 
 function HeartIcon({ filled }: { filled: boolean }) {
   if (filled) {
@@ -41,16 +60,13 @@ function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) 
     <article className="bg-card-bg border border-border rounded-xl overflow-hidden shadow-sm">
       {/* Header con usuario y avatar */}
       <div className="flex items-center gap-3 p-4">
-        <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-primary">
-          <Image
-            src={post.user.avatar}
-            alt={post.user.username}
-            fill
-            className="object-cover"
-          />
-        </div>
+        <Avatar 
+          src={post.user?.avatar} 
+          username={post.user?.username}
+          alt={post.user?.username || "Usuario"}
+        />
         <div className="flex flex-col">
-          <span className="font-semibold text-foreground">{post.user.username}</span>
+          <span className="font-semibold text-foreground">{post.user?.username}</span>
           <span className="text-xs text-foreground/50">{getTimeAgo(post.created_at)}</span>
         </div>
       </div>
@@ -59,7 +75,7 @@ function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) 
       <div className="relative w-full aspect-square">
         <Image
           src={post.image_url}
-          alt={`Post de ${post.user.username}`}
+          alt={`Post de ${post.user?.username}`}
           fill
           className="object-cover"
         />
@@ -77,13 +93,13 @@ function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) 
             <HeartIcon filled={post.isLiked} />
           </button>
           <span className="font-semibold text-foreground">
-            {post.likes.toLocaleString()} likes
+            {post.likes.toLocaleString('en-US')} likes
           </span>
         </div>
 
         {/* Caption */}
         <p className="mt-2 text-foreground">
-          <span className="font-semibold">{post.user.username}</span>{" "}
+          <span className="font-semibold">{post.user?.username}</span>{" "}
           <span className="text-foreground/80">{post.caption}</span>
         </p>
       </div>
@@ -92,7 +108,14 @@ function PostCard({ post, onLike }: { post: Post; onLike: (id: number | string) 
 }
 
 export default function Home() {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
+  const observer = useRef<IntersectionObserver | null>(null);
+  const lastPostRef = useRef<HTMLDivElement | null>(null);
+
+  const POSTS_PER_PAGE = 6;
 
   const handleLike = (postId: number | string) => {
     setPosts((prevPosts) =>
@@ -108,13 +131,78 @@ export default function Home() {
     );
   };
 
+  const fetchPosts = useCallback(async (pageNum: number, isInitial = false) => {
+    if (isInitial) setLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('posts_new')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(pageNum * POSTS_PER_PAGE, (pageNum + 1) * POSTS_PER_PAGE - 1);
+
+      if (error) {
+        console.error('Error al obtener los posts:', error);
+        return;
+      }
+
+      const postsWithLike = (data || []).map(post => ({
+        ...post,
+        isLiked: false
+      }));
+
+      if (isInitial) {
+        setPosts(postsWithLike);
+      } else {
+        setPosts(prev => [...prev, ...postsWithLike]);
+      }
+
+      setHasMore((data || []).length === POSTS_PER_PAGE);
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPosts(0, true);
+  }, [fetchPosts]);
+
+  useEffect(() => {
+    const options = {
+      root: null,
+      rootMargin: '20px',
+      threshold: 1.0
+    };
+
+    observer.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMore && !loading) {
+        const nextPage = page + 1;
+        setPage(nextPage);
+        fetchPosts(nextPage);
+      }
+    }, options);
+
+    if (lastPostRef.current) {
+      observer.current.observe(lastPostRef.current);
+    }
+
+    return () => {
+      if (observer.current) {
+        observer.current.disconnect();
+      }
+    };
+  }, [loading, hasMore, page, fetchPosts]);
+
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card-bg border-b border-border">
         <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-center">
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Suplatzigram
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent">
+            Power Insta
           </h1>
         </div>
       </header>
@@ -122,9 +210,28 @@ export default function Home() {
       {/* Feed de posts */}
       <main className="max-w-lg mx-auto px-4 py-6">
         <div className="flex flex-col gap-6">
-          {posts.map((post) => (
-            <PostCard key={post.id} post={post} onLike={handleLike} />
+          {posts.map((post, index) => (
+            <div
+              key={post.id}
+              ref={index === posts.length - 1 ? lastPostRef : null}
+            >
+              <PostCard post={post} onLike={handleLike} />
+            </div>
           ))}
+          
+          {/* Loading indicator */}
+          {loading && (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
+          
+          {/* End of posts message */}
+          {!hasMore && posts.length > 0 && (
+            <div className="text-center py-8 text-foreground/60">
+              <p>¡No hay más posts por mostrar!</p>
+            </div>
+          )}
         </div>
       </main>
     </div>
